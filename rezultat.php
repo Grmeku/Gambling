@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['users']) || !isset($_SESSION['num_dice']) || !isset($_SESSION['num_games'])) {
+if (!isset($_SESSION['users'])) {
     header("Location: index.php");
     exit;
 }
@@ -9,22 +9,51 @@ if (!isset($_SESSION['users']) || !isset($_SESSION['num_dice']) || !isset($_SESS
 $users = $_SESSION['users'];
 $numDice = $_SESSION['num_dice'];
 $numGames = $_SESSION['num_games'];
+$currentGame = $_SESSION['current_game'] ?? 1;
+$totalScores = $_SESSION['total_scores'] ?? [0, 0, 0];
+$roundResults = $_SESSION['round_results'] ?? [];
+
+$isLastGame = $currentGame == $numGames;
+$gameOver = $currentGame > $numGames;
 
 $results = [];
 $sums = [];
 
-foreach ($users as $index => $user) {
-    $dice = [];
-    for ($i = 0; $i < $numDice; $i++) {
-        $roll = rand(1, 6);
-        $dice[] = $roll;
+// ROLL DICE ONLY ON POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$gameOver) {
+    foreach ($users as $i => $user) {
+        $dice = [];
+        for ($j = 0; $j < $numDice; $j++) {
+            $dice[] = rand(1, 6);
+        }
+        $results[$i] = $dice;
+        $sums[$i] = array_sum($dice);
+        $totalScores[$i] += $sums[$i];
     }
-    $results[$index] = $dice;
-    $sums[$index] = array_sum($dice);
+
+    $_SESSION['total_scores'] = $totalScores;
+    $roundResults[$currentGame] = [
+        'rolls' => $results,
+        'sums' => $sums
+    ];
+    $_SESSION['round_results'] = $roundResults;
+
+    // Move to next round only after processing
+    $_SESSION['current_game']++;
+    header("Location: rezultat.php");
+    exit;
 }
 
-$max = max($sums);
-$winners = array_keys($sums, $max);
+// Load last stored round (the one just played)
+$previousGame = $currentGame - 1;
+$hasData = isset($roundResults[$previousGame]);
+
+if ($hasData) {
+    $results = $roundResults[$previousGame]['rolls'];
+    $sums = $roundResults[$previousGame]['sums'];
+}
+
+$isFinalRoundDisplayed = $previousGame == $numGames;
 ?>
 
 <!DOCTYPE html>
@@ -32,28 +61,36 @@ $winners = array_keys($sums, $max);
 <head>
     <meta charset="UTF-8">
     <title>Rezultati</title>
-    <link rel="stylesheet" href="rezultat.css">
-    <link rel="icon" type="image/svg+xml" href="img/poker-chip-svgrepo-com.svg">
+    <link rel="stylesheet" href="result.css">
+    <link rel="icon" href="img/poker-chip-svgrepo-com.svg" type="image/svg+xml">
     <script>
-        // Show final dice values after 2 seconds
+        const showWinner = <?= $isFinalRoundDisplayed ? 'true' : 'false' ?>;
+
         setTimeout(() => {
-            document.querySelectorAll(".dice-result").forEach((container, index) => {
-                const dice = JSON.parse(container.getAttribute('data-dice'));
-                container.innerHTML = "";
-                dice.forEach(roll => {
-                    const img = document.createElement('img');
-                    img.src = `img/dice${roll}.gif`;
-                    img.alt = `Kocka ${roll}`;
-                    container.appendChild(img);
+            document.querySelectorAll(".dice-result").forEach((el) => {
+                const dice = JSON.parse(el.getAttribute("data-dice"));
+                el.innerHTML = "";
+                dice.forEach((num) => {
+                    const img = document.createElement("img");
+                    img.src = `img/dice${num}.gif`;
+                    img.alt = `Kocka ${num}`;
+                    el.appendChild(img);
                 });
             });
-            document.querySelectorAll(".sum").forEach(el => el.style.display = 'block');
-        }, 2000);
 
-        // Redirect back after 10 seconds
-        setTimeout(() => {
-            window.location.href = "index.php";
-        }, 10000);
+            document.querySelectorAll(".sum").forEach(el => {
+                el.style.display = "block";
+            });
+
+            if (showWinner) {
+                document.getElementById("winner").style.display = "block";
+                setTimeout(() => {
+                    window.location.href = "index.php";
+                }, 10000);
+            } else {
+                document.getElementById("next-btn").style.display = "inline-block";
+            }
+        }, 2000);
     </script>
 </head>
 <body>
@@ -64,23 +101,52 @@ $winners = array_keys($sums, $max);
                 <?php foreach ($users as $i => $user): ?>
                     <div class="player-box">
                         <div class="player-name"><?= htmlspecialchars($user['ime']) ?></div>
-                        <div class="dice-result" data-dice='<?= json_encode($results[$i]) ?>'>
-                            <?php for ($j = 0; $j < $numDice; $j++): ?>
-                                <img src="img/dice-anim.gif" alt="Kocke" />
-                            <?php endfor; ?>
-                        </div>
-                        <div class="sum" style="display: none;">Seštevek kock: <?= $sums[$i] ?></div>
+                        <?php if ($hasData && isset($results[$i])): ?>
+                            <div class="dice-result" data-dice='<?= json_encode($results[$i]) ?>'>
+                                <?php for ($j = 0; $j < $numDice; $j++): ?>
+                                    <img src="img/dice-anim.gif" alt="Kocka">
+                                <?php endfor; ?>
+                            </div>
+                            <div class="sum" style="display: none;">
+                                Seštevek te igre: <?= $sums[$i] ?><br>
+                                Skupaj: <?= $totalScores[$i] ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="sum">Čakamo na prvi met...</div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
 
             <div class="info-box">
-                Številka igre: 1/<?= $numGames ?><br><br>
-                <button class="play-btn">Rezultati</button>
+                <?php if (!$isFinalRoundDisplayed): ?>
+                    Številka igre: <?= $previousGame ?>/<?= $numGames ?><br><br>
+                    <form method="post">
+                        <button type="submit" id="next-btn" class="play-btn" style="display: none;">Naslednja igra</button>
+                    </form>
+                <?php endif; ?>
+
+                <div id="winner" style="display: none;">
+                    <h2>Zmagovalec(i):</h2>
+                    <?php
+                        $max = max($totalScores);
+                        foreach ($totalScores as $i => $score) {
+                            if ($score === $max) {
+                                echo "<p>" . htmlspecialchars($users[$i]['ime']) . " – {$score} točk</p>";
+                            }
+                        }
+                    ?>
+                    <p>(Preusmeritev v 10 sekundah...)</p>
+                </div>
             </div>
         </div>
     </div>
 </body>
 </html>
 
-<?php session_destroy(); ?>
+<?php
+// Destroy session after final round shown
+if ($isFinalRoundDisplayed) {
+    session_destroy();
+}
+?>

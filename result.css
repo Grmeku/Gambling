@@ -1,0 +1,91 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: url('img/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Courier New', monospace;
+    color: #FFA500;
+    text-align: center;
+}
+
+h1 {
+    font-size: 60px;
+    margin-top: 30px;
+    color: #FFA500;
+    text-shadow: 2px 2px 5px #000;
+    letter-spacing: 4px;
+}
+
+.container {
+    width: 100%;
+}
+
+.result-card {
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 2px solid #FFA500;
+    border-radius: 10px;
+    width: 75%;
+    margin: 20px auto;
+    padding: 20px;
+    box-shadow: 0 0 30px #000;
+}
+
+.game-box {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.player-box {
+    flex: 1;
+    border: 1px solid orange;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #000;
+}
+
+.player-name {
+    font-weight: bold;
+    font-size: 20px;
+    color: orange;
+    margin-bottom: 10px;
+}
+
+.dice-result img {
+    width: 50px;
+    margin: 0 3px;
+}
+
+.sum {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #00FFFF;
+}
+
+.info-box {
+    border: 1px solid orange;
+    border-radius: 5px;
+    margin: 10px auto;
+    width: 90%;
+    padding: 15px;
+    color: #00FFFF;
+    background-color: #000;
+}
+
+.play-btn {
+    padding: 6px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: black;
+    color: orange;
+    border: 2px solid orange;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.play-btn:hover {
+    background-color: orange;
+    color: black;
+}
