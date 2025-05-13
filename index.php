@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['num_games'] = $_POST['num_games'];
     $_SESSION['current_game'] = 1;
     $_SESSION['total_scores'] = [0, 0, 0];
-    header("Location: rezultat.php");
+    header("Location: game.php");
     exit;
 }
 ?>
